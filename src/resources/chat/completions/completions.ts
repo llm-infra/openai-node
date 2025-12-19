@@ -65,36 +65,9 @@ export class Completions extends APIResource {
     body: ChatCompletionCreateParams,
     options?: RequestOptions,
   ): APIPromise<ChatCompletion> | APIPromise<Stream<ChatCompletionChunk>> {
-    const transformedBody = this._transformGuidedParams(body);
-    return this._client.post('/chat/completions', { body: transformedBody, ...options, stream: body.stream ?? false }) as
+    return this._client.post('/chat/completions', { body, ...options, stream: body.stream ?? false }) as
       | APIPromise<ChatCompletion>
       | APIPromise<Stream<ChatCompletionChunk>>;
-  }
-
-  /**
-   * Transform guided expression parameters from SDK format to API format.
-   * - guided_choice_expr -> guided_choice
-   * - guided_json_expr -> guided_json
-   * - guided_regex_expr -> guided_regex
-   */
-  private _transformGuidedParams(body: ChatCompletionCreateParams): Record<string, unknown> {
-    const bodyAny = body as any;
-    const transformed: Record<string, unknown> = { ...bodyAny };
-
-    if (bodyAny.guided_choice_expr !== undefined) {
-      transformed['guided_choice'] = bodyAny.guided_choice_expr;
-      delete transformed['guided_choice_expr'];
-    }
-    if (bodyAny.guided_json_expr !== undefined) {
-      transformed['guided_json'] = bodyAny.guided_json_expr;
-      delete transformed['guided_json_expr'];
-    }
-    if (bodyAny.guided_regex_expr !== undefined) {
-      transformed['guided_regex'] = bodyAny.guided_regex_expr;
-      delete transformed['guided_regex_expr'];
-    }
-
-    return transformed;
   }
 
   /**
@@ -1505,27 +1478,6 @@ export interface ChatCompletionAllowedTools {
   tools: Array<{ [key: string]: unknown }>;
 }
 
-/**
- * Expression value for guided generation constraints.
- * Used for guided_choice_expr, guided_json_expr, and guided_regex_expr.
- */
-export interface ExprValue {
-  /**
-   * The type of the expression.
-   */
-  type?: string;
-
-  /**
-   * The expression string.
-   */
-  expr?: string;
-
-  /**
-   * Nested text expression value.
-   */
-  text?: ExprValue;
-}
-
 export type ChatCompletionReasoningEffort = Shared.ReasoningEffort | null;
 
 export type ChatCompletionCreateParams =
@@ -1592,22 +1544,25 @@ export interface ChatCompletionCreateParamsBase {
   functions?: Array<ChatCompletionCreateParams.Function>;
 
   /**
-   * Guided choice expression for constrained generation.
-   * Constrains the model output to one of the specified choices.
+   * Output guidance: constrains the output to be exactly one of the specified choices.
+   * Mutually exclusive with `guided_json` and `guided_regex`.
+   * If specified, the output will be exactly one of the choices.
    */
-  guided_choice_expr?: ExprValue | null;
+  guided_choice?: Array<string> | null;
 
   /**
-   * Guided JSON expression for constrained generation.
-   * Constrains the model output to match a JSON schema.
+   * Output guidance: constrains the output to follow a predefined JSON schema.
+   * Mutually exclusive with `guided_choice` and `guided_regex`.
+   * If specified, the output will follow the JSON schema.
    */
-  guided_json_expr?: ExprValue | null;
+  guided_json?: string | Record<string, unknown> | null;
 
   /**
-   * Guided regex expression for constrained generation.
-   * Constrains the model output to match a regular expression pattern.
+   * Output guidance: constrains the output to match a regular expression pattern.
+   * Mutually exclusive with `guided_choice` and `guided_json`.
+   * If specified, the output will follow the regex pattern.
    */
-  guided_regex_expr?: ExprValue | null;
+  guided_regex?: string | null;
 
   /**
    * Modify the likelihood of specified tokens appearing in the completion.
@@ -2048,7 +2003,6 @@ export declare namespace Completions {
     type ChatCompletionCustomTool as ChatCompletionCustomTool,
     type ChatCompletionDeleted as ChatCompletionDeleted,
     type ChatCompletionDeveloperMessageParam as ChatCompletionDeveloperMessageParam,
-    type ExprValue as ExprValue,
     type ChatCompletionFunctionCallOption as ChatCompletionFunctionCallOption,
     type ChatCompletionFunctionMessageParam as ChatCompletionFunctionMessageParam,
     type ChatCompletionFunctionTool as ChatCompletionFunctionTool,
